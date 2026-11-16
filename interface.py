@@ -4,15 +4,15 @@ from tkinter import ttk, filedialog, messagebox
 from huffman_core import CompactadorHuffman
 
 
-# PALETA DE CORES INSPIRADA NAS DUAS REFERÊNCIAS VISUAIS
-COR_FUNDO_PRINCIPAL = "#0e1117"   # Fundo escuro principal (Ref 2)
-COR_SIDEBAR = "#1d2327"           # Fundo da barra lateral (Ref 1 e 2)
+# PALETA DE CORES BASE DO PROJETO
+COR_FUNDO_PRINCIPAL = "#0e1117"   # Fundo escuro principal
+COR_SIDEBAR = "#1d2327"           # Fundo da barra lateral
 COR_CARD = "#161b22"              # Fundo dos cartões/widgets
-COR_BORDA_CARD = "#30363d"        # Borda sutil estilo container de Widget (Ref 1)
-COR_PRIMARIA = "#ff4b4b"          # Vermelho/Coral de ação principal e sliders (Ref 2)
-COR_DESTAQUE_MENU = "#2271b1"     # Azul de destaque de seleção (Ref 1)
-COR_SUCESSO_BG = "#133223"        # Fundo verde escuro dos alertas (Ref 2)
-COR_SUCESSO_TXT = "#3fb950"       # Texto verde claro dos alertas (Ref 2)
+COR_BORDA_CARD = "#30363d"        # Borda sutil estilo container de Widget
+COR_PRIMARIA = "#ff4b4b"          # Vermelho/Coral de ação principal e sliders
+COR_DESTAQUE_MENU = "#2271b1"     # Azul de destaque de seleção
+COR_SUCESSO_BG = "#133223"        # Fundo verde escuro dos alertas
+COR_SUCESSO_TXT = "#3fb950"       # Texto verde claro dos alertas
 COR_TEXTO = "#f0f6fc"             # Texto principal claro
 COR_TEXTO_SEC = "#8b949e"         # Texto secundário/legendas
 
@@ -26,10 +26,13 @@ class InterfaceHuffman:
 
         self.compactador = CompactadorHuffman()
 
-        # Variáveis de Estado e Opções da Sidebar
-        self.var_usar_lz77 = tk.BooleanVar(value=True)
-        self.var_max_folhas = tk.IntVar(value=25)
-        self.var_bytes_hexdump = tk.IntVar(value=512)
+        # Opções separadas de pré-compressão (LZSS e LZ77)
+        self.var_usar_lzss = tk.BooleanVar(value=True)
+        self.var_usar_lz77 = tk.BooleanVar(value=False)
+
+        # Controles de visualização (Folhas padrão: 14 | Hexdump padrão: 704)
+        self.var_max_folhas = tk.IntVar(value=14)
+        self.var_bytes_hexdump = tk.IntVar(value=704)
 
         self.caminho_txt_atual = None
         self.caminho_huff_atual = None
@@ -57,11 +60,11 @@ class InterfaceHuffman:
             self.area_principal,
             text="Compactador de Huffman",
             font=("Segoe UI", 22, "bold"),
-             bg=COR_FUNDO_PRINCIPAL,
+            bg=COR_FUNDO_PRINCIPAL,
             fg=COR_TEXTO
         ).pack(anchor="w", pady=(0, 12))
 
-        # Barra Horizontal de Abas (6 Seções da Referência 2)
+        # Barra Horizontal de Abas (4 Abas)
         self.barra_abas = tk.Frame(self.area_principal, bg=COR_FUNDO_PRINCIPAL)
         self.barra_abas.pack(fill=tk.X, pady=(0, 2))
 
@@ -70,8 +73,6 @@ class InterfaceHuffman:
             ("descompactar", "📂 Descompactar"),
             ("arquivo", "📄 Arquivo compactado"),
             ("arvore", "🌳 Árvore de Huffman"),
-            ("taxa", "📊 Taxa de compactação"),
-            ("comparativo", "⚡ Huffman x Huffman + LZ77"),
         ]
 
         for chave, rotulo in abas_info:
@@ -111,7 +112,7 @@ class InterfaceHuffman:
 
         tk.Label(
             self.sidebar,
-            text="Compactador de texto com Huffman\n+ pré-compressão LZ77 (LZSS)",
+            text="Compactador de texto com Huffman\n+ pré-compressão LZSS e LZ77",
             font=("Segoe UI", 8),
             justify="left",
             bg=COR_SIDEBAR,
@@ -120,18 +121,32 @@ class InterfaceHuffman:
 
         tk.Frame(self.sidebar, bg=COR_BORDA_CARD, height=1).pack(fill=tk.X, padx=15, pady=5)
 
-        # Seção: Opções
+        # Seção: Opções de Pré-compressão (Separadas)
         tk.Label(
             self.sidebar,
-            text="Opções",
+            text="Opções de Pré-compressão",
             font=("Segoe UI", 10, "bold"),
             bg=COR_SIDEBAR,
             fg=COR_TEXTO
         ).pack(anchor="w", padx=18, pady=(12, 8))
 
-        chk_lz = tk.Checkbutton(
+        chk_lzss = tk.Checkbutton(
             self.sidebar,
-            text="Usar LZ77 antes do Huffman",
+            text="Habilitar pré-compressão (LZSS)",
+            variable=self.var_usar_lzss,
+            font=("Segoe UI", 9),
+            bg=COR_SIDEBAR,
+            fg=COR_TEXTO,
+            selectcolor=COR_FUNDO_PRINCIPAL,
+            activebackground=COR_SIDEBAR,
+            activeforeground=COR_TEXTO,
+            cursor="hand2"
+        )
+        chk_lzss.pack(anchor="w", padx=14, pady=(0, 6))
+
+        chk_lz77 = tk.Checkbutton(
+            self.sidebar,
+            text="Habilitar pré-compressão (LZ77 / llz7)",
             variable=self.var_usar_lz77,
             font=("Segoe UI", 9),
             bg=COR_SIDEBAR,
@@ -141,56 +156,7 @@ class InterfaceHuffman:
             activeforeground=COR_TEXTO,
             cursor="hand2"
         )
-        chk_lz.pack(anchor="w", padx=14, pady=(0, 12))
-
-        # Slider 1: Folhas exibidas na árvore
-        tk.Label(
-            self.sidebar,
-            text="Folhas exibidas na árvore",
-            font=("Segoe UI", 8),
-            bg=COR_SIDEBAR,
-            fg=COR_TEXTO_SEC
-        ).pack(anchor="w", padx=18)
-
-        scale_folhas = tk.Scale(
-            self.sidebar,
-            from_=5,
-            to=80,
-            orient=tk.HORIZONTAL,
-            variable=self.var_max_folhas,
-            bg=COR_SIDEBAR,
-            fg=COR_PRIMARIA,
-            troughcolor=COR_FUNDO_PRINCIPAL,
-            highlightthickness=0,
-            bd=0,
-            command=lambda _: self._atualizar_se_aba_ativa("arvore")
-        )
-        scale_folhas.pack(fill=tk.X, padx=16, pady=(0, 12))
-
-        # Slider 2: Bytes no hexdump
-        tk.Label(
-            self.sidebar,
-            text="Bytes no hexdump",
-            font=("Segoe UI", 8),
-            bg=COR_SIDEBAR,
-            fg=COR_TEXTO_SEC
-        ).pack(anchor="w", padx=18)
-
-        scale_hex = tk.Scale(
-            self.sidebar,
-            from_=64,
-            to=2048,
-            resolution=64,
-            orient=tk.HORIZONTAL,
-            variable=self.var_bytes_hexdump,
-            bg=COR_SIDEBAR,
-            fg=COR_PRIMARIA,
-            troughcolor=COR_FUNDO_PRINCIPAL,
-            highlightthickness=0,
-            bd=0,
-            command=lambda _: self._atualizar_se_aba_ativa("arquivo")
-        )
-        scale_hex.pack(fill=tk.X, padx=16, pady=(0, 15))
+        chk_lz77.pack(anchor="w", padx=14, pady=(0, 14))
 
         tk.Frame(self.sidebar, bg=COR_BORDA_CARD, height=1).pack(fill=tk.X, padx=15, pady=8)
 
@@ -227,12 +193,20 @@ class InterfaceHuffman:
         )
         self.lbl_estado_huff.pack(fill=tk.X, padx=16, pady=4)
 
-        # Card Expansível "Como usar" no rodapé da Sidebar
-        card_ajuda = tk.Frame(self.sidebar, bg=COR_CARD, highlightbackground=COR_BORDA_CARD, highlightthickness=1)
+        # Card "Como usar" no rodapé da Sidebar
+        card_ajuda = tk.Frame(
+            self.sidebar, bg=COR_CARD, highlightbackground=COR_BORDA_CARD, highlightthickness=1
+        )
         card_ajuda.pack(fill=tk.X, padx=16, pady=15)
         tk.Label(
             card_ajuda,
-            text="▸ Como usar:\n1. Escolha um .txt na aba Compactar.\n2. Veja a Árvore e a Taxa.\n3. Restaure na aba Descompactar.",
+            text=(
+                "▸ Como usar:\n"
+                "1. Escolha LZSS e/ou LZ77 acima.\n"
+                "2. Compacte um .txt e veja a Taxa.\n"
+                "3. Ajuste os bytes no Arquivo compactado\n"
+                "   e as folhas na Árvore de Huffman."
+            ),
             font=("Segoe UI", 8),
             justify="left",
             bg=COR_CARD,
@@ -241,7 +215,15 @@ class InterfaceHuffman:
             pady=8
         ).pack(anchor="w")
 
-    # UTILITÁRIO: CRIA UM CONTAINER DE WIDGET ESTILIZADO (INSPIRADO NA REF 1 e 2)
+    def _obter_rotulo_pre_compressao(self, usar_lzss, usar_lz77):
+        ativos = []
+        if usar_lzss:
+            ativos.append("LZSS")
+        if usar_lz77:
+            ativos.append("LZ77")
+        return " + ".join(ativos) if ativos else "Nenhuma (Huffman puro)"
+
+    # UTILITÁRIO: CRIA UM CONTAINER DE WIDGET ESTILIZADO
     def _criar_widget_card(self, pai, titulo):
         outer = tk.Frame(
             pai,
@@ -249,12 +231,12 @@ class InterfaceHuffman:
             highlightbackground=COR_BORDA_CARD,
             highlightthickness=1,
             padx=14,
-            pady=12
+            pady=10
         )
-        outer.pack(fill=tk.X, pady=6)
+        outer.pack(fill=tk.X, pady=5)
 
         header = tk.Frame(outer, bg=COR_CARD)
-        header.pack(fill=tk.X, pady=(0, 8))
+        header.pack(fill=tk.X, pady=(0, 6))
 
         tk.Label(
             header,
@@ -275,9 +257,9 @@ class InterfaceHuffman:
             highlightbackground=COR_SUCESSO_TXT,
             highlightthickness=1,
             padx=14,
-            pady=10
+            pady=8
         )
-        banner.pack(fill=tk.X, pady=8)
+        banner.pack(fill=tk.X, pady=6)
         tk.Label(
             banner,
             text=texto,
@@ -288,7 +270,7 @@ class InterfaceHuffman:
 
     def _criar_linha_metricas(self, pai, lista_metricas):
         frame_m = tk.Frame(pai, bg=COR_FUNDO_PRINCIPAL)
-        frame_m.pack(fill=tk.X, pady=10)
+        frame_m.pack(fill=tk.X, pady=8)
 
         for rotulo, valor in lista_metricas:
             col = tk.Frame(frame_m, bg=COR_FUNDO_PRINCIPAL)
@@ -297,12 +279,8 @@ class InterfaceHuffman:
                 col, text=rotulo, font=("Segoe UI", 8), bg=COR_FUNDO_PRINCIPAL, fg=COR_TEXTO_SEC
             ).pack(anchor="w")
             tk.Label(
-                col, text=valor, font=("Segoe UI", 18, "bold"), bg=COR_FUNDO_PRINCIPAL, fg=COR_TEXTO
+                col, text=valor, font=("Segoe UI", 16, "bold"), bg=COR_FUNDO_PRINCIPAL, fg=COR_TEXTO
             ).pack(anchor="w", pady=(2, 0))
-
-    def _atualizar_se_aba_ativa(self, chave_aba):
-        if getattr(self, "aba_atual", None) == chave_aba:
-            self.selecionar_aba(chave_aba)
 
     def selecionar_aba(self, chave):
         self.aba_atual = chave
@@ -323,13 +301,9 @@ class InterfaceHuffman:
             self._render_aba_arquivo()
         elif chave == "arvore":
             self._render_aba_arvore()
-        elif chave == "taxa":
-            self._render_aba_taxa()
-        elif chave == "comparativo":
-            self._render_aba_comparativo()
 
     # ==========================================
-    # ABA 1: COMPACTAR
+    # ABA 1: COMPACTAR + TAXA DE COMPACTAÇÃO CENTRALIZADA
     # ==========================================
     def _render_aba_compactar(self):
         tk.Label(
@@ -338,12 +312,12 @@ class InterfaceHuffman:
             font=("Segoe UI", 14, "bold"),
             bg=COR_FUNDO_PRINCIPAL,
             fg=COR_TEXTO
-        ).pack(anchor="w", pady=(0, 10))
+        ).pack(anchor="w", pady=(0, 8))
 
         card_upload = self._criar_widget_card(self.container_aba, "Selecionar arquivo de entrada (.txt)")
 
         linha_up = tk.Frame(card_upload, bg=COR_CARD)
-        linha_up.pack(fill=tk.X, pady=4)
+        linha_up.pack(fill=tk.X, pady=2)
 
         btn_escolher = tk.Button(
             linha_up,
@@ -359,7 +333,11 @@ class InterfaceHuffman:
         )
         btn_escolher.pack(side=tk.LEFT, padx=(0, 12))
 
-        nome_arq = os.path.basename(self.caminho_txt_atual) if self.caminho_txt_atual else "Nenhum arquivo selecionado (ex: teste.txt)"
+        nome_arq = (
+            os.path.basename(self.caminho_txt_atual)
+            if self.caminho_txt_atual
+            else "Nenhum arquivo selecionado (ex: teste.txt)"
+        )
         tk.Label(
             linha_up,
             text=nome_arq,
@@ -368,7 +346,7 @@ class InterfaceHuffman:
             fg=COR_TEXTO_SEC
         ).pack(side=tk.LEFT)
 
-        # Botão Principal Largo (Estilo Coral/Vermelho da Ref 2)
+        # Botão Principal Largo
         tk.Button(
             self.container_aba,
             text="🗜️  Compactar agora",
@@ -378,11 +356,12 @@ class InterfaceHuffman:
             activebackground="#d93838",
             activeforeground=COR_TEXTO,
             bd=0,
-            pady=10,
+            pady=9,
             cursor="hand2",
             command=self._executar_compactacao
-        ).pack(fill=tk.X, pady=12)
+        ).pack(fill=tk.X, pady=8)
 
+        # Resultado e Matemática da Taxa de Compactação logo abaixo do botão
         if self.ultimo_relatorio_comp:
             r = self.ultimo_relatorio_comp
             self._criar_banner_sucesso(
@@ -392,18 +371,53 @@ class InterfaceHuffman:
 
             kb_orig = r["bytes_originais"] / 1024
             kb_comp = r["bytes_arquivo_final"] / 1024
+            rotulo_lz = self._obter_rotulo_pre_compressao(r["usar_lzss"], r["usar_lz77"])
+
             self._criar_linha_metricas(self.container_aba, [
-                ("Original", f"{kb_orig:.2f} KB ({r['bytes_originais']} B)"),
-                ("Compactado (.huff)", f"{kb_comp:.2f} KB ({r['bytes_arquivo_final']} B)"),
-                ("Economia de Bits", f"{r['taxa_compactacao_pct']:.2f}%"),
-                ("LZ77 Ativo", "sim" if r["usar_lz77"] else "não")
+                ("Bits Originais (8 bits/char)", f"{r['bits_originais']} bits ({kb_orig:.2f} KB)"),
+                ("Bits Finais (Huffman)", f"{r['bits_compactados']} bits ({kb_comp:.2f} KB)"),
+                ("Taxa de Compactação (Bits)", f"{r['taxa_compactacao_pct']:.2f}%"),
+                ("Pré-compressão Ativa", rotulo_lz)
             ])
 
-            card_prev = self._criar_widget_card(self.container_aba, "Prévia do texto original carregado")
-            txt_box = tk.Text(card_prev, height=8, bg=COR_FUNDO_PRINCIPAL, fg=COR_TEXTO, font=("Consolas", 9), bd=0)
-            txt_box.pack(fill=tk.BOTH, expand=True)
-            txt_box.insert("1.0", r["texto_original"][:2000])
-            txt_box.config(state=tk.DISABLED)
+            card_taxa = self._criar_widget_card(
+                self.container_aba,
+                "Detalhamento Matemático da Taxa de Compactação e Tabela de Códigos"
+            )
+
+            frame_txt = tk.Frame(card_taxa, bg=COR_FUNDO_PRINCIPAL)
+            frame_txt.pack(fill=tk.BOTH, expand=True)
+
+            scroll_taxa = ttk.Scrollbar(frame_txt, orient=tk.VERTICAL)
+            txt_mat = tk.Text(
+                frame_txt,
+                height=11,
+                bg=COR_FUNDO_PRINCIPAL,
+                fg=COR_TEXTO,
+                font=("Consolas", 9),
+                bd=0,
+                yscrollcommand=scroll_taxa.set
+            )
+            scroll_taxa.config(command=txt_mat.yview)
+            scroll_taxa.pack(side=tk.RIGHT, fill=tk.Y)
+            txt_mat.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+            explicacao = (
+                f"FÓRMULA MATEMÁTICA DA TAXA DE COMPACTAÇÃO:\n"
+                f"  Taxa (%) = (1 - (Bits_Compactados / Bits_Originais)) * 100\n"
+                f"  Taxa (%) = (1 - ({r['bits_compactados']} / {r['bits_originais']})) * 100 = {r['taxa_compactacao_pct']:.2f}% de redução de bits\n"
+                f"  Tamanho em Disco: {r['bytes_originais']} bytes (original) -> {r['bytes_arquivo_final']} bytes (.huff c/ cabeçalho)\n\n"
+                f"{'Símbolo':<15} | {'Frequência':<12} | {'Bits':<6} | {'Código Binário de Huffman'}\n"
+                + "-" * 65 + "\n"
+            )
+            txt_mat.insert(tk.END, explicacao)
+
+            ordenados = sorted(self.compactador.frequencias.items(), key=lambda x: x[1], reverse=True)
+            for char, freq in ordenados[:40]:
+                cod = self.compactador.tabela_codigos[char]
+                txt_mat.insert(tk.END, f"{repr(char):<15} | {freq:<12} | {len(cod):<6} | {cod}\n")
+
+            txt_mat.config(state=tk.DISABLED)
 
     def _escolher_arquivo_txt(self):
         caminho = filedialog.askopenfilename(
@@ -418,7 +432,6 @@ class InterfaceHuffman:
 
     def _executar_compactacao(self):
         if not self.caminho_txt_atual:
-            # Se o usuário clicar direto e existir o teste.txt na pasta, usa ele automaticamente
             if os.path.exists("teste.txt"):
                 self.caminho_txt_atual = os.path.abspath("teste.txt")
             else:
@@ -431,6 +444,7 @@ class InterfaceHuffman:
             relatorio = self.compactador.compactar_arquivo(
                 self.caminho_txt_atual,
                 saida,
+                usar_lzss=self.var_usar_lzss.get(),
                 usar_lz77=self.var_usar_lz77.get()
             )
             self.caminho_huff_atual = saida
@@ -438,19 +452,21 @@ class InterfaceHuffman:
 
             kb_orig = relatorio["bytes_originais"] / 1024
             kb_comp = relatorio["bytes_arquivo_final"] / 1024
-            sufixo_lz = " (com LZ77)" if relatorio["usar_lz77"] else " (Huffman puro)"
+            rotulo_lz = self._obter_rotulo_pre_compressao(
+                relatorio["usar_lzss"], relatorio["usar_lz77"]
+            )
             self.lbl_estado_txt.config(
                 text=f"📄 {os.path.basename(self.caminho_txt_atual)} - {kb_orig:.2f} KB"
             )
             self.lbl_estado_huff.config(
-                text=f"🗜️ compactado: {kb_comp:.2f} KB{sufixo_lz}", fg=COR_SUCESSO_TXT
+                text=f"🗜️ {kb_comp:.2f} KB ({rotulo_lz})", fg=COR_SUCESSO_TXT
             )
             self.selecionar_aba("compactar")
         except Exception as e:
             messagebox.showerror("Erro na Compactação", str(e))
 
     # ==========================================
-    # ABA 2: DESCOMPACTAR (IDÊNTICA À REF 2)
+    # ABA 2: DESCOMPACTAR
     # ==========================================
     def _render_aba_descompactar(self):
         tk.Label(
@@ -499,7 +515,6 @@ class InterfaceHuffman:
         )
         btn_escolher_huff.pack(anchor="w")
 
-        # Botão Largo Coral "Descompactar"
         tk.Button(
             self.container_aba,
             text="📂  Descompactar",
@@ -523,13 +538,14 @@ class InterfaceHuffman:
 
             kb_c = rd["bytes_compactado"] / 1024
             kb_r = rd["bytes_restaurado"] / 1024
+            rotulo_lz = self._obter_rotulo_pre_compressao(rd["usou_lzss"], rd["usou_lz77"])
+
             self._criar_linha_metricas(self.container_aba, [
                 ("Compactado", f"{kb_c:.2f} KB"),
                 ("Restaurado", f"{kb_r:.2f} KB"),
-                ("LZ77 no arquivo", "sim" if rd["usou_lz77"] else "não")
+                ("Pré-compressão no arquivo", rotulo_lz)
             ])
 
-            # Conferência byte a byte com o original
             if self.ultimo_relatorio_comp and rd["texto_restaurado"] == self.ultimo_relatorio_comp["texto_original"]:
                 self._criar_banner_sucesso(
                     self.container_aba,
@@ -537,7 +553,9 @@ class InterfaceHuffman:
                 )
 
             card_rest = self._criar_widget_card(self.container_aba, "Texto restaurado")
-            txt_rest = tk.Text(card_rest, height=8, bg=COR_FUNDO_PRINCIPAL, fg=COR_TEXTO, font=("Consolas", 9), bd=0)
+            txt_rest = tk.Text(
+                card_rest, height=8, bg=COR_FUNDO_PRINCIPAL, fg=COR_TEXTO, font=("Consolas", 9), bd=0
+            )
             txt_rest.pack(fill=tk.BOTH, expand=True)
             txt_rest.insert("1.0", rd["texto_restaurado"][:2000])
             txt_rest.config(state=tk.DISABLED)
@@ -567,7 +585,7 @@ class InterfaceHuffman:
             messagebox.showerror("Erro ao Descompactar", str(e))
 
     # ==========================================
-    # ABA 3: ARQUIVO COMPACTADO (HEXDUMP + BITS)
+    # ABA 3: ARQUIVO COMPACTADO + SLIDER DE BYTES NO HEXDUMP EMBUTIDO
     # ==========================================
     def _render_aba_arquivo(self):
         tk.Label(
@@ -588,6 +606,63 @@ class InterfaceHuffman:
             ).pack(anchor="w")
             return
 
+        # Controle deslizante de Bytes no Hexdump dentro da própria seção
+        card_ajuste_hex = self._criar_widget_card(
+            self.container_aba, "Ajuste de Bytes no Hexdump"
+        )
+        linha_slider_hex = tk.Frame(card_ajuste_hex, bg=COR_CARD)
+        linha_slider_hex.pack(fill=tk.X)
+
+        tk.Label(
+            linha_slider_hex,
+            text="Bytes exibidos no hexdump:",
+            font=("Segoe UI", 9),
+            bg=COR_CARD,
+            fg=COR_TEXTO_SEC
+        ).pack(side=tk.LEFT, padx=(0, 12))
+
+        scale_hex = tk.Scale(
+            linha_slider_hex,
+            from_=64,
+            to=2048,
+            resolution=64,
+            orient=tk.HORIZONTAL,
+            variable=self.var_bytes_hexdump,
+            bg=COR_CARD,
+            fg=COR_PRIMARIA,
+            troughcolor=COR_FUNDO_PRINCIPAL,
+            highlightthickness=0,
+            bd=0,
+            command=lambda _: self._atualizar_conteudo_hexdump()
+        )
+        scale_hex.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        card_hex = self._criar_widget_card(
+            self.container_aba, "Hexdump dos bytes gravados em disco"
+        )
+        self.txt_hex_aba = tk.Text(
+            card_hex, height=10, bg=COR_FUNDO_PRINCIPAL, fg="#79c0ff", font=("Consolas", 9), bd=0
+        )
+        self.txt_hex_aba.pack(fill=tk.BOTH, expand=True)
+        self._atualizar_conteudo_hexdump()
+
+        if self.ultimo_relatorio_comp:
+            card_bits = self._criar_widget_card(
+                self.container_aba, "Fluxo de Bits Gerados pela Árvore (0 e 1)"
+            )
+            txt_bits = tk.Text(
+                card_bits, height=5, bg=COR_FUNDO_PRINCIPAL, fg=COR_SUCESSO_TXT, font=("Consolas", 9), bd=0
+            )
+            txt_bits.pack(fill=tk.BOTH, expand=True)
+            txt_bits.insert("1.0", self.ultimo_relatorio_comp["string_bits"][:1200] + "...")
+            txt_bits.config(state=tk.DISABLED)
+
+    def _atualizar_conteudo_hexdump(self):
+        if not hasattr(self, "txt_hex_aba") or not self.txt_hex_aba.winfo_exists():
+            return
+        if not self.caminho_huff_atual or not os.path.exists(self.caminho_huff_atual):
+            return
+
         limite_bytes = self.var_bytes_hexdump.get()
         with open(self.caminho_huff_atual, "rb") as f:
             dados = f.read(limite_bytes)
@@ -599,35 +674,22 @@ class InterfaceHuffman:
             ascii_str = "".join(chr(b) if 32 <= b < 127 else "." for b in bloco)
             linhas_hex.append(f"{i:04X}  |  {hex_str:<47}  |  {ascii_str}")
 
-        card_hex = self._criar_widget_card(
-            self.container_aba, f"Hexdump dos primeiros {limite_bytes} bytes gravados em disco"
-        )
-        txt_hex = tk.Text(card_hex, height=11, bg=COR_FUNDO_PRINCIPAL, fg="#79c0ff", font=("Consolas", 9), bd=0)
-        txt_hex.pack(fill=tk.BOTH, expand=True)
-        txt_hex.insert("1.0", "\n".join(linhas_hex))
-        txt_hex.config(state=tk.DISABLED)
-
-        if self.ultimo_relatorio_comp:
-            card_bits = self._criar_widget_card(self.container_aba, "Fluxo de Bits Gerados pela Árvore (0 e 1)")
-            txt_bits = tk.Text(card_bits, height=5, bg=COR_FUNDO_PRINCIPAL, fg=COR_SUCESSO_TXT, font=("Consolas", 9), bd=0)
-            txt_bits.pack(fill=tk.BOTH, expand=True)
-            txt_bits.insert("1.0", self.ultimo_relatorio_comp["string_bits"][:1200] + "...")
-            txt_bits.config(state=tk.DISABLED)
+        self.txt_hex_aba.config(state=tk.NORMAL)
+        self.txt_hex_aba.delete("1.0", tk.END)
+        self.txt_hex_aba.insert("1.0", "\n".join(linhas_hex))
+        self.txt_hex_aba.config(state=tk.DISABLED)
 
     # ==========================================
-    # ABA 4: ÁRVORE DE HUFFMAN (CANVAS GRÁFICO)
+    # ABA 4: ÁRVORE DE HUFFMAN + SLIDER DE FOLHAS EXIBIDAS EMBUTIDO
     # ==========================================
     def _render_aba_arvore(self):
-        topo = tk.Frame(self.container_aba, bg=COR_FUNDO_PRINCIPAL)
-        topo.pack(fill=tk.X, pady=(0, 8))
-
         tk.Label(
-            topo,
-            text=f"Árvore de Huffman Montada (Exibindo até {self.var_max_folhas.get()} folhas no controle lateral)",
-            font=("Segoe UI", 12, "bold"),
+            self.container_aba,
+            text="Árvore de Huffman Montada",
+            font=("Segoe UI", 14, "bold"),
             bg=COR_FUNDO_PRINCIPAL,
             fg=COR_TEXTO
-        ).pack(side=tk.LEFT)
+        ).pack(anchor="w", pady=(0, 8))
 
         if not self.compactador.raiz:
             tk.Label(
@@ -639,23 +701,64 @@ class InterfaceHuffman:
             ).pack(anchor="w", pady=10)
             return
 
+        # Controle deslizante de Folhas Exibidas dentro da própria seção da Árvore
+        card_ajuste_folhas = self._criar_widget_card(
+            self.container_aba, "Ajuste de Folhas Exibidas na Árvore"
+        )
+        linha_slider_folhas = tk.Frame(card_ajuste_folhas, bg=COR_CARD)
+        linha_slider_folhas.pack(fill=tk.X)
+
+        self.lbl_info_folhas = tk.Label(
+            linha_slider_folhas,
+            text=f"Folhas exibidas na árvore ({self.var_max_folhas.get()}):",
+            font=("Segoe UI", 9),
+            bg=COR_CARD,
+            fg=COR_TEXTO_SEC
+        )
+        self.lbl_info_folhas.pack(side=tk.LEFT, padx=(0, 12))
+
+        scale_folhas = tk.Scale(
+            linha_slider_folhas,
+            from_=5,
+            to=80,
+            orient=tk.HORIZONTAL,
+            variable=self.var_max_folhas,
+            bg=COR_CARD,
+            fg=COR_PRIMARIA,
+            troughcolor=COR_FUNDO_PRINCIPAL,
+            highlightthickness=0,
+            bd=0,
+            command=lambda _: self._atualizar_desenho_arvore()
+        )
+        scale_folhas.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
         frame_canvas = tk.Frame(
             self.container_aba, bg=COR_CARD, highlightbackground=COR_BORDA_CARD, highlightthickness=1
         )
-        frame_canvas.pack(fill=tk.BOTH, expand=True)
+        frame_canvas.pack(fill=tk.BOTH, expand=True, pady=(4, 0))
 
         sx = ttk.Scrollbar(frame_canvas, orient=tk.HORIZONTAL)
         sy = ttk.Scrollbar(frame_canvas, orient=tk.VERTICAL)
-        canvas = tk.Canvas(
+        self.canvas_arvore_aba = tk.Canvas(
             frame_canvas, bg=COR_CARD, highlightthickness=0, xscrollcommand=sx.set, yscrollcommand=sy.set
         )
-        sx.config(command=canvas.xview)
-        sy.config(command=canvas.yview)
+        sx.config(command=self.canvas_arvore_aba.xview)
+        sy.config(command=self.canvas_arvore_aba.yview)
         sx.pack(side=tk.BOTTOM, fill=tk.X)
         sy.pack(side=tk.RIGHT, fill=tk.Y)
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.canvas_arvore_aba.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self._desenhar_grafo_arvore(canvas, self.compactador.raiz, self.var_max_folhas.get())
+        self._atualizar_desenho_arvore()
+
+    def _atualizar_desenho_arvore(self):
+        if not hasattr(self, "canvas_arvore_aba") or not self.canvas_arvore_aba.winfo_exists():
+            return
+        limite = self.var_max_folhas.get()
+        if hasattr(self, "lbl_info_folhas") and self.lbl_info_folhas.winfo_exists():
+            self.lbl_info_folhas.config(text=f"Folhas exibidas na árvore ({limite}):")
+
+        self.canvas_arvore_aba.delete("all")
+        self._desenhar_grafo_arvore(self.canvas_arvore_aba, self.compactador.raiz, limite)
 
     def _desenhar_grafo_arvore(self, canvas, raiz, limite_folhas):
         posicoes = {}
@@ -674,8 +777,8 @@ class InterfaceHuffman:
                 folhas_contadas[0] += 1
                 return True
 
-            esq_ok = calc_coords(no.esquerda, prof + 1)
-            dir_ok = calc_coords(no.direita, prof + 1)
+            calc_coords(no.esquerda, prof + 1)
+            calc_coords(no.direita, prof + 1)
             filhos_visiveis = [
                 posicoes[f][0] for f in (no.esquerda, no.direita) if f in posicoes
             ]
@@ -690,11 +793,17 @@ class InterfaceHuffman:
             if no.esquerda in posicoes:
                 x2, y2 = posicoes[no.esquerda]
                 canvas.create_line(x1, y1, x2, y2, fill="#58a6ff", width=2)
-                canvas.create_text((x1 + x2) / 2 - 8, (y1 + y2) / 2, text="0", fill="#58a6ff", font=("Segoe UI", 9, "bold"))
+                canvas.create_text(
+                    (x1 + x2) / 2 - 8, (y1 + y2) / 2,
+                    text="0", fill="#58a6ff", font=("Segoe UI", 9, "bold")
+                )
             if no.direita in posicoes:
                 x2, y2 = posicoes[no.direita]
                 canvas.create_line(x1, y1, x2, y2, fill=COR_PRIMARIA, width=2)
-                canvas.create_text((x1 + x2) / 2 + 8, (y1 + y2) / 2, text="1", fill=COR_PRIMARIA, font=("Segoe UI", 9, "bold"))
+                canvas.create_text(
+                    (x1 + x2) / 2 + 8, (y1 + y2) / 2,
+                    text="1", fill=COR_PRIMARIA, font=("Segoe UI", 9, "bold")
+                )
 
         for no, (x, y) in posicoes.items():
             r = 23
@@ -706,103 +815,6 @@ class InterfaceHuffman:
             canvas.create_text(x, y, text=rotulo, fill=COR_TEXTO, font=("Segoe UI", 8, "bold"))
 
         canvas.configure(scrollregion=canvas.bbox("all"))
-
-    # ==========================================
-    # ABA 5: TAXA DE COMPACTAÇÃO E FÓRMULA
-    # ==========================================
-    def _render_aba_taxa(self):
-        tk.Label(
-            self.container_aba,
-            text="Análise Matemática da Taxa de Compactação",
-            font=("Segoe UI", 14, "bold"),
-            bg=COR_FUNDO_PRINCIPAL,
-            fg=COR_TEXTO
-        ).pack(anchor="w", pady=(0, 8))
-
-        if not self.ultimo_relatorio_comp:
-            tk.Label(
-                self.container_aba,
-                text="Compacte um arquivo primeiro para ver os cálculos detalhados.",
-                font=("Segoe UI", 10),
-                bg=COR_FUNDO_PRINCIPAL,
-                fg=COR_TEXTO_SEC
-            ).pack(anchor="w")
-            return
-
-        r = self.ultimo_relatorio_comp
-        self._criar_linha_metricas(self.container_aba, [
-            ("Bits Originais (8 bits/char)", f"{r['bits_originais']} bits"),
-            ("Bits após Huffman", f"{r['bits_compactados']} bits"),
-            ("Redução Pura de Bits", f"{r['taxa_compactacao_pct']:.2f}%"),
-            ("Redução Final c/ Cabeçalho", f"{r['taxa_arquivo_pct']:.2f}%")
-        ])
-
-        card_form = self._criar_widget_card(self.container_aba, "Fórmula e Tabela de Códigos Binários")
-        txt = tk.Text(card_form, height=14, bg=COR_FUNDO_PRINCIPAL, fg=COR_TEXTO, font=("Consolas", 9), bd=0)
-        txt.pack(fill=tk.BOTH, expand=True)
-
-        explicacao = (
-            f"FÓRMULA DA TAXA DE COMPACTAÇÃO:\n"
-            f"Taxa (%) = (1 - (Bits_Compactados / Bits_Originais)) * 100\n"
-            f"Taxa (%) = (1 - ({r['bits_compactados']} / {r['bits_originais']})) * 100 = {r['taxa_compactacao_pct']:.2f}%\n\n"
-            f"{'Símbolo':<15} | {'Frequência':<12} | {'Bits':<6} | {'Código de Huffman'}\n"
-            + "-" * 60 + "\n"
-        )
-        txt.insert(tk.END, explicacao)
-
-        ordenados = sorted(self.compactador.frequencias.items(), key=lambda x: x[1], reverse=True)
-        for char, freq in ordenados[:40]:
-            cod = self.compactador.tabela_codigos[char]
-            txt.insert(tk.END, f"{repr(char):<15} | {freq:<12} | {len(cod):<6} | {cod}\n")
-        txt.config(state=tk.DISABLED)
-
-    # ==========================================
-    # ABA 6: HUFFMAN X HUFFMAN + LZ77
-    # ==========================================
-    def _render_aba_comparativo(self):
-        tk.Label(
-            self.container_aba,
-            text="Comparativo: Huffman Puro vs. Huffman + LZ77 (DEFLATE)",
-            font=("Segoe UI", 14, "bold"),
-            bg=COR_FUNDO_PRINCIPAL,
-            fg=COR_TEXTO
-        ).pack(anchor="w", pady=(0, 8))
-
-        if not self.caminho_txt_atual:
-            tk.Label(
-                self.container_aba,
-                text="Selecione e compacte um arquivo .txt na primeira aba para comparar os dois algoritmos ao vivo.",
-                font=("Segoe UI", 10),
-                bg=COR_FUNDO_PRINCIPAL,
-                fg=COR_TEXTO_SEC
-            ).pack(anchor="w")
-            return
-
-        # Executa ambos em arquivos temporários para comparar lado a lado
-        comp_puro = CompactadorHuffman()
-        comp_lz = CompactadorHuffman()
-        res_puro = comp_puro.compactar_arquivo(self.caminho_txt_atual, "temp_puro.huff", usar_lz77=False)
-        res_lz = comp_lz.compactar_arquivo(self.caminho_txt_atual, "temp_lz.huff", usar_lz77=True)
-
-        self._criar_linha_metricas(self.container_aba, [
-            ("Tamanho Original", f"{res_puro['bytes_originais']} B"),
-            ("Só Huffman (Bits)", f"{res_puro['bits_compactados']} bits ({res_puro['taxa_compactacao_pct']:.1f}%)"),
-            ("Huffman + LZ77 (Bits)", f"{res_lz['bits_compactados']} bits ({res_lz['taxa_compactacao_pct']:.1f}%)")
-        ])
-
-        card_comp = self._criar_widget_card(self.container_aba, "Análise Comparativa para Apresentação")
-        ganho = res_lz["taxa_compactacao_pct"] - res_puro["taxa_compactacao_pct"]
-        texto_comp = (
-            f"• Huffman Puro: Ataca apenas a redundância estatística de caracteres isolados.\n"
-            f"  Resultado: {res_puro['bits_compactados']} bits ({res_puro['bytes_arquivo_final']} bytes em disco).\n\n"
-            f"• LZ77 (LZSS) + Huffman: Primeiro substitui palavras e sequências repetidas por ponteiros (distância, comprimento)\n"
-            f"  na janela deslizante e, em seguida, aplica a Árvore de Huffman sobre os símbolos resultantes.\n"
-            f"  Resultado: {res_lz['bits_compactados']} bits ({res_lz['bytes_arquivo_final']} bytes em disco).\n\n"
-            f"• Diferença na Taxa de Compactação de Bits: {ganho:+.2f} pontos percentuais."
-        )
-        tk.Label(
-            card_comp, text=texto_comp, font=("Segoe UI", 10), justify="left", bg=COR_CARD, fg=COR_TEXTO
-        ).pack(anchor="w", pady=4)
 
 
 if __name__ == "__main__":
