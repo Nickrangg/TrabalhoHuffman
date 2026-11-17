@@ -17,143 +17,6 @@ class CompactadorHuffman:
         self.tabela_codigos = {}
         self.frequencias = {}
 
-    # ==========================================================================
-    # OPÇÃO 1: PRÉ-COMPRESSÃO LZSS (Janela Deslizante com Limiar >= 4 chars)
-    # ==========================================================================
-    def aplicar_lzss(self, texto, tamanho_janela=255, tamanho_max_match=32):
-        resultado = []
-        i = 0
-        n = len(texto)
-
-        while i < n:
-            melhor_distancia = 0
-            melhor_comprimento = 0
-            inicio_janela = max(0, i - tamanho_janela)
-
-            for j in range(inicio_janela, i):
-                comprimento = 0
-                while (
-                    comprimento < tamanho_max_match
-                    and i + comprimento < n
-                    and texto[j + comprimento] == texto[i + comprimento]
-                ):
-                    comprimento += 1
-                    if j + comprimento >= i:
-                        break
-
-                if comprimento > melhor_comprimento:
-                    melhor_comprimento = comprimento
-                    melhor_distancia = i - j
-
-            # LZSS: Só substitui por ponteiro se economizar espaço (>= 4 caracteres)
-            if melhor_comprimento >= 4:
-                token = f"\x00{chr(melhor_distancia)}{chr(melhor_comprimento)}"
-                resultado.append(token)
-                i += melhor_comprimento
-            else:
-                if texto[i] == "\x00":
-                    resultado.append("\x00\x00\x00")
-                else:
-                    resultado.append(texto[i])
-                i += 1
-
-        return "".join(resultado)
-
-    def reverter_lzss(self, texto_lz):
-        saida = []
-        i = 0
-        n = len(texto_lz)
-
-        while i < n:
-            if texto_lz[i] == "\x00" and i + 2 < n:
-                distancia = ord(texto_lz[i + 1])
-                comprimento = ord(texto_lz[i + 2])
-                if distancia == 0 and comprimento == 0:
-                    saida.append("\x00")
-                else:
-                    inicio = len(saida) - distancia
-                    for k in range(comprimento):
-                        saida.append(saida[inicio + k])
-                i += 3
-            else:
-                saida.append(texto_lz[i])
-                i += 1
-
-        return "".join(saida)
-
-    # ==========================================================================
-    # OPÇÃO 2: PRÉ-COMPRESSÃO LZ77 / LLZ7 (Janela Deslizante Direta >= 2 chars)
-    # ==========================================================================
-    def aplicar_lz77(self, texto, tamanho_janela=180, tamanho_max_match=24):
-        resultado = []
-        i = 0
-        n = len(texto)
-
-        while i < n:
-            melhor_distancia = 0
-            melhor_comprimento = 0
-            inicio_janela = max(0, i - tamanho_janela)
-
-            for j in range(inicio_janela, i):
-                comprimento = 0
-                while (
-                    comprimento < tamanho_max_match
-                    and i + comprimento < n
-                    and texto[j + comprimento] == texto[i + comprimento]
-                ):
-                    comprimento += 1
-                    if j + comprimento >= i:
-                        break
-
-                if comprimento > melhor_comprimento:
-                    melhor_comprimento = comprimento
-                    melhor_distancia = i - j
-
-            # LZ77 clássico: codifica qualquer repetição direta a partir de 2 caracteres
-            if melhor_comprimento >= 2:
-                prox_char = texto[i + melhor_comprimento] if (i + melhor_comprimento) < n else ""
-                token = f"\x01{chr(melhor_distancia)}{chr(melhor_comprimento)}{prox_char}"
-                resultado.append(token)
-                i += melhor_comprimento + (1 if prox_char != "" else 0)
-            else:
-                if texto[i] == "\x01":
-                    resultado.append("\x01\x00\x00")
-                else:
-                    resultado.append(texto[i])
-                i += 1
-
-        return "".join(resultado)
-
-    def reverter_lz77(self, texto_lz77):
-        saida = []
-        i = 0
-        n = len(texto_lz77)
-
-        while i < n:
-            if texto_lz77[i] == "\x01" and i + 2 < n:
-                distancia = ord(texto_lz77[i + 1])
-                comprimento = ord(texto_lz77[i + 2])
-                if distancia == 0 and comprimento == 0:
-                    saida.append("\x01")
-                    i += 3
-                else:
-                    inicio = len(saida) - distancia
-                    for k in range(comprimento):
-                        saida.append(saida[inicio + k])
-                    if i + 3 < n:
-                        saida.append(texto_lz77[i + 3])
-                        i += 4
-                    else:
-                        i += 3
-            else:
-                saida.append(texto_lz77[i])
-                i += 1
-
-        return "".join(saida)
-
-    # ==========================================================================
-    # MOTOR PRINCIPAL DE HUFFMAN
-    # ==========================================================================
     def contar_frequencias(self, texto):
         frequencias = {}
         for caractere in texto:
@@ -195,6 +58,132 @@ class CompactadorHuffman:
         self._gerar_codigos_recursivo(self.raiz, "")
         return self.tabela_codigos
 
+    def aplicar_lzss(self, texto, tamanho_janela=255, tamanho_max_match=32):
+        resultado = []
+        i = 0
+        n = len(texto)
+
+        while i < n:
+            melhor_distancia = 0
+            melhor_comprimento = 0
+            inicio_janela = max(0, i - tamanho_janela)
+
+            for j in range(inicio_janela, i):
+                comprimento = 0
+                while (
+                    comprimento < tamanho_max_match
+                    and i + comprimento < n
+                    and texto[j + comprimento] == texto[i + comprimento]
+                ):
+                    comprimento += 1
+                    if j + comprimento >= i:
+                        break
+
+                if comprimento > melhor_comprimento:
+                    melhor_comprimento = comprimento
+                    melhor_distancia = i - j
+
+            if melhor_comprimento >= 4:
+                token = f"\x00{chr(melhor_distancia)}{chr(melhor_comprimento)}"
+                resultado.append(token)
+                i += melhor_comprimento
+            else:
+                if texto[i] == "\x00":
+                    resultado.append("\x00\x00\x00")
+                else:
+                    resultado.append(texto[i])
+                i += 1
+
+        return "".join(resultado)
+
+    def reverter_lzss(self, texto_lz):
+        saida = []
+        i = 0
+        n = len(texto_lz)
+
+        while i < n:
+            if texto_lz[i] == "\x00" and i + 2 < n:
+                distancia = ord(texto_lz[i + 1])
+                comprimento = ord(texto_lz[i + 2])
+                if distancia == 0 and comprimento == 0:
+                    saida.append("\x00")
+                else:
+                    inicio = len(saida) - distancia
+                    for k in range(comprimento):
+                        saida.append(saida[inicio + k])
+                i += 3
+            else:
+                saida.append(texto_lz[i])
+                i += 1
+
+        return "".join(saida)
+
+    def aplicar_lz77(self, texto, tamanho_janela=180, tamanho_max_match=24):
+        resultado = []
+        i = 0
+        n = len(texto)
+
+        while i < n:
+            melhor_distancia = 0
+            melhor_comprimento = 0
+            inicio_janela = max(0, i - tamanho_janela)
+
+            for j in range(inicio_janela, i):
+                comprimento = 0
+                while (
+                    comprimento < tamanho_max_match
+                    and i + comprimento < n
+                    and texto[j + comprimento] == texto[i + comprimento]
+                ):
+                    comprimento += 1
+                    if j + comprimento >= i:
+                        break
+
+                if comprimento > melhor_comprimento:
+                    melhor_comprimento = comprimento
+                    melhor_distancia = i - j
+
+            if melhor_comprimento >= 2:
+                prox_char = texto[i + melhor_comprimento] if (i + melhor_comprimento) < n else ""
+                token = f"\x01{chr(melhor_distancia)}{chr(melhor_comprimento)}{prox_char}"
+                resultado.append(token)
+                i += melhor_comprimento + (1 if prox_char != "" else 0)
+            else:
+                if texto[i] == "\x01":
+                    resultado.append("\x01\x00\x00")
+                else:
+                    resultado.append(texto[i])
+                i += 1
+
+        return "".join(resultado)
+
+    def reverter_lz77(self, texto_lz77):
+        saida = []
+        i = 0
+        n = len(texto_lz77)
+
+        while i < n:
+            if texto_lz77[i] == "\x01" and i + 2 < n:
+                distancia = ord(texto_lz77[i + 1])
+                comprimento = ord(texto_lz77[i + 2])
+                if distancia == 0 and comprimento == 0:
+                    saida.append("\x01")
+                    i += 3
+                else:
+                    inicio = len(saida) - distancia
+                    for k in range(comprimento):
+                        saida.append(saida[inicio + k])
+                    if i + 3 < n:
+                        saida.append(texto_lz77[i + 3])
+                        i += 4
+                    else:
+                        i += 3
+            else:
+                saida.append(texto_lz77[i])
+                i += 1
+
+        return "".join(saida)
+
     def compactar_arquivo(self, caminho_entrada, caminho_saida, usar_lzss=False, usar_lz77=False):
         inicio_tempo = time.perf_counter()
 
@@ -204,7 +193,6 @@ class CompactadorHuffman:
         if not texto_original:
             raise ValueError("O arquivo selecionado está vazio.")
 
-        # Aplica as pré-compressões habilitadas pelo usuário
         texto_processado = texto_original
         if usar_lzss:
             texto_processado = self.aplicar_lzss(texto_processado)
@@ -274,6 +262,7 @@ class CompactadorHuffman:
         usou_lzss = cabecalho.get("lzss", False)
         usou_lz77 = cabecalho.get("lz77", False)
 
+        self.frequencias = frequencias
         self.construir_arvore(frequencias)
         self.gerar_tabela_codigos()
 
@@ -294,7 +283,6 @@ class CompactadorHuffman:
                     texto_reconstruido.append(no_atual.caractere)
                     no_atual = self.raiz
 
-        # Reverte as pré-compressões na ordem inversa da aplicação
         texto_final = "".join(texto_reconstruido)
         if usou_lz77:
             texto_final = self.reverter_lz77(texto_final)
